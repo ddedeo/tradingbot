@@ -1,5 +1,5 @@
 {
-  "symbols": ["AAPL", "MU", "TTWO", "NVDA", "GOOG", "GOOGL", "SNDK", "AMZN", "SKHY"],
+  "symbols": ["AAPL", "MU", "TTWO", "NVDA", "GOOG", "SNDK", "AMZN", "SKHY"],
   "strategies": {
     "ma_crossover": {"short_window": 20, "long_window": 50},
     "rsi": {"period": 14, "oversold": 30, "overbought": 70},
@@ -11,7 +11,7 @@
   "trade_size": 1,
   "lookback_days": 150,
   "risk": {
-    "max_positions": 12,
+    "max_positions": 50,
     "max_position_value": 5000,
     "max_daily_loss": 500,
     "trailing_stop_pct": 10
