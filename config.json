@@ -1,18 +1,25 @@
 {
-  "symbols": ["AAPL", "MU"],
+  "symbols": ["AAPL", "MU", "TTWO", "NVDA", "GOOG", "GOOGL", "SNDK", "AMZN", "SKHY"],
   "strategies": {
     "ma_crossover": {"short_window": 20, "long_window": 50},
     "rsi": {"period": 14, "oversold": 30, "overbought": 70},
     "breakout": {"lookback": 20},
-    "bollinger": {"window": 20, "num_std": 2}
+    "bollinger": {"window": 20, "num_std": 2},
+    "macd": {"fast": 12, "slow": 26, "signal": 9}
   },
   "combine": "any",
   "trade_size": 1,
   "lookback_days": 150,
   "risk": {
-    "max_positions": 5,
+    "max_positions": 12,
     "max_position_value": 5000,
-    "max_daily_loss": 500
+    "max_daily_loss": 500,
+    "trailing_stop_pct": 10
+  },
+  "regime_filter": {
+    "enabled": true,
+    "symbol": "SPY",
+    "ma_days": 200
   },
   "ai": {
     "enabled": true,

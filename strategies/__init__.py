@@ -8,13 +8,14 @@ To add a strategy: create a module with a `signals` function, import it here,
 add it to STRATEGIES, and give it a params block in config.json.
 """
 
-from . import bollinger, breakout, ma_crossover, rsi
+from . import bollinger, breakout, ma_crossover, macd, rsi
 
 STRATEGIES = {
     "ma_crossover": ma_crossover.signals,
     "rsi": rsi.signals,
     "breakout": breakout.signals,
     "bollinger": bollinger.signals,
+    "macd": macd.signals,
 }
 
 

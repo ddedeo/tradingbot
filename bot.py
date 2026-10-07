@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 
 from ai_advisor import fetch_headlines, review_trade
 from data import fetch_history
+from risk import regime_allows_buys, trailing_stop_hit
 from strategies import STRATEGIES, combine
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -30,7 +31,7 @@ def setup_logging():
     fmt = logging.Formatter("%(asctime)s %(levelname)-7s %(message)s", "%Y-%m-%d %H:%M:%S")
     file_handler = logging.FileHandler(BASE_DIR / "logs" / "bot.log", encoding="utf-8")
     file_handler.setFormatter(fmt)
-    console = logging.StreamHandler()
+    console = logging.StreamHandler(sys.stdout)
     console.setFormatter(fmt)
     log.setLevel(logging.INFO)
     log.addHandler(file_handler)
@@ -117,6 +118,9 @@ def main():
     else:
         log.info("No Alpaca keys: assuming no open positions.")
 
+    regime_ok = regime_allows_buys(config.get("regime_filter", {}))
+    trail_pct = risk.get("trailing_stop_pct")
+
     for symbol in config["symbols"]:
         try:
             df = fetch_history(symbol, config["lookback_days"])
@@ -124,10 +128,21 @@ def main():
             log.error("%s: could not load prices: %s", symbol, e)
             continue
 
+        # Trailing stop runs before the vote and skips the AI: protective exits are never vetoed.
+        held = positions.get(symbol, 0.0)
+        # The stop exits the whole position, not just trade_size.
+        if trading and trail_pct and held > 0 and trailing_stop_hit(trading, symbol, df, trail_pct):
+            log.info("%s: TRAILING STOP hit, selling entire position of %g.", symbol, held)
+            if args.dry_run:
+                log.info("%s: DRY RUN, would SELL %g shares.", symbol, held)
+            else:
+                place_order(trading, symbol, held, "sell")
+                positions.pop(symbol)
+            continue
+
         votes = {name: STRATEGIES[name](df, params).iloc[-1] for name, params in config["strategies"].items()}
         action = combine(votes, config["combine"])
         price = df["Close"].iloc[-1]
-        held = positions.get(symbol, 0.0)
         log.info("%s close %.2f (%s) votes=%s -> %s", symbol, price, df.index[-1].date(), votes, action.upper())
 
         if action == "hold":
@@ -140,6 +155,9 @@ def main():
                 continue
             if buys_blocked:
                 log.info("%s: daily loss limit active, skipping buy.", symbol)
+                continue
+            if not regime_ok:
+                log.info("%s: market regime filter active, skipping buy.", symbol)
                 continue
             if len(positions) >= risk["max_positions"]:
                 log.info("%s: at max_positions (%d), skipping buy.", symbol, risk["max_positions"])
