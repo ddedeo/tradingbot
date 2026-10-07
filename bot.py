@@ -130,15 +130,14 @@ def main():
 
         # Trailing stop runs before the vote and skips the AI: protective exits are never vetoed.
         held = positions.get(symbol, 0.0)
-        if trading and trail_pct and held >= qty and trailing_stop_hit(trading, symbol, df, trail_pct):
-            log.info("%s: TRAILING STOP hit, selling %d.", symbol, qty)
+        # The stop exits the whole position, not just trade_size.
+        if trading and trail_pct and held > 0 and trailing_stop_hit(trading, symbol, df, trail_pct):
+            log.info("%s: TRAILING STOP hit, selling entire position of %g.", symbol, held)
             if args.dry_run:
-                log.info("%s: DRY RUN, would SELL %d shares.", symbol, qty)
+                log.info("%s: DRY RUN, would SELL %g shares.", symbol, held)
             else:
-                place_order(trading, symbol, qty, "sell")
-                positions[symbol] = held - qty
-                if positions[symbol] <= 0:
-                    positions.pop(symbol)
+                place_order(trading, symbol, held, "sell")
+                positions.pop(symbol)
             continue
 
         votes = {name: STRATEGIES[name](df, params).iloc[-1] for name, params in config["strategies"].items()}

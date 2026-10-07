@@ -49,20 +49,33 @@ def last_buy_fill(trading, symbol):
     return latest.filled_at, float(latest.filled_avg_price)
 
 
-def trailing_stop_hit(trading, symbol, df, trail_pct):
-    """True if the last close is trail_pct% or more below the highest close since the last buy."""
+def trailing_stop_info(trading, symbol, df, trail_pct):
+    """Entry, peak, current close, % below peak and stop price since the last buy, or None."""
     fill = last_buy_fill(trading, symbol)
     if fill is None:
-        log.warning("%s: no filled buy order found; trailing stop not applied.", symbol)
-        return False
+        return None
     filled_at, entry = fill
 
     since = pd.Timestamp(filled_at).tz_convert(df.index.tz).normalize()
     closes = df["Close"][df.index >= since]
     peak = max(entry, closes.max()) if not closes.empty else entry
     last = df["Close"].iloc[-1]
-    drop = (peak - last) / peak * 100
+    return {
+        "bought_on": since.date(),
+        "entry": entry,
+        "peak": peak,
+        "last": last,
+        "drop_pct": (peak - last) / peak * 100,
+        "stop_price": peak * (1 - trail_pct / 100),
+    }
 
+
+def trailing_stop_hit(trading, symbol, df, trail_pct):
+    """True if the last close is trail_pct% or more below the highest close since the last buy."""
+    info = trailing_stop_info(trading, symbol, df, trail_pct)
+    if info is None:
+        log.warning("%s: no filled buy order found; trailing stop not applied.", symbol)
+        return False
     log.info("%s: trailing stop check: bought %.2f on %s, peak %.2f, now %.2f (%.1f%% below peak, stop at %g%%)",
-             symbol, entry, since.date(), peak, last, drop, trail_pct)
-    return drop >= trail_pct
+             symbol, info["entry"], info["bought_on"], info["peak"], info["last"], info["drop_pct"], trail_pct)
+    return info["drop_pct"] >= trail_pct
