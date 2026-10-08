@@ -23,6 +23,7 @@ python backtest.py            # how each strategy would have done historically
 python bot.py --dry-run       # evaluate today's signals, never trade
 python bot.py                 # evaluate and trade
 python bot.py --no-ai         # trade without the AI review step
+python status.py              # display status report of every owned stock
 ```
 
 Logs go to `logs/bot.log`. Create a file named `STOP` in this folder to halt all trading.
